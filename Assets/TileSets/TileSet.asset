@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4232073cfb3649949d9614f184aa33a, type: 3}
+  m_Name: TileSet
+  m_EditorClassIdentifier: 
+  plane1: {fileID: -577795571684211238, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  plane2: {fileID: -5538220705945243834, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  plane3: {fileID: -4860196792993622228, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  plane4: {fileID: -7295208053933978555, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  twoSide1: {fileID: -3666185789236591206, guid: 44d7e8bab985f9034bd281c1e2c4c343,
+    type: 3}
+  twoSide2: {fileID: 2689541949087596338, guid: 44d7e8bab985f9034bd281c1e2c4c343,
+    type: 3}
+  twoSide3: {fileID: -1442809757058308825, guid: 44d7e8bab985f9034bd281c1e2c4c343,
+    type: 3}
+  twoSide4: {fileID: -7294988580407918945, guid: 44d7e8bab985f9034bd281c1e2c4c343,
+    type: 3}
+  sideH1: {fileID: -1469067285363037603, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  sideH2: {fileID: 7302604053380942177, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  sideH3: {fileID: -1112678757515818978, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  sideH4: {fileID: -6083803688683222658, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  sideV1: {fileID: 6865824361541074841, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  sideV2: {fileID: 7372312783166114381, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  sideV3: {fileID: 6673154903152677824, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  sideV4: {fileID: 1097695458174132494, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  hole1: {fileID: 5178817740997385521, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  hole2: {fileID: -3855259030206101797, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  hole3: {fileID: 9191836343844682202, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  hole4: {fileID: -7323223526110638727, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
