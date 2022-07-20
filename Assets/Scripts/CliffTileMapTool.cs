@@ -6,8 +6,8 @@ using UnityEditor;
 using UnityEditor.EditorTools;
 using UnityEditor.ShortcutManagement;
 
-[EditorTool("TileMap Tool", typeof(TileMap))]
-public class TileMapTool : EditorTool, IDrawSelectedHandles
+[EditorTool("TileMap Tool", typeof(CliffTileMap))]
+public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
 {
     private int _x;
     private int _y;
@@ -19,14 +19,23 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
 
     private int _lastHotControl = -1;
 
-    private bool[,] _isPainted;
-
-    private TileMap _tileMap;
+    private CliffTileMap _tileMap;
 
     void OnEnable()
     {
-        base.OnActivated();
-        _tileMap = (TileMap)target;
+        Debug.Log("CliffTileMapTool.OnEnable");
+
+        _tileMap = (CliffTileMap)target;
+        _tileMap.onCreateChunk += OnCreateChunk;
+        _tileMap.onRemoveChunk += OnRemoveChunk;
+        _tileMap.onTileSet += OnTileSet;
+
+        var e = _tileMap.chunkEnumerator;
+        while (e.MoveNext())
+        {
+            (int x, int y) = e.Current;
+            OnCreateChunk(x, y);
+        }
     }
 
     public override void OnToolGUI(EditorWindow window)
@@ -35,7 +44,7 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
         {
             return;
         }
-        var tileMap = (TileMap)target;
+        var tileMap = (CliffTileMap)target;
         Handles.zTest = UnityEngine.Rendering.CompareFunction.Disabled;
 
         UpdateCursor();
@@ -54,7 +63,6 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
                     {
                         BeginPaint();
                         Paint(_x, _y);
-                        _tileMap.Generate();
                     }
                 }
                 break;
@@ -64,26 +72,82 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
                 EndPaint();
                 break;
         }
+
+        _tileMap.UpdateChunks();
     }
 
-    // IDrawSelectedHandles interface allows tools to draw gizmos when the target objects are selected, but the tool
-    // has not yet been activated. This allows you to keep MonoBehaviour free of debug and gizmo code.
     public void OnDrawHandles()
     {
-        //var tileMap = (TileMap)target;
-        //Handles.zTest = UnityEngine.Rendering.CompareFunction.LessEqual;
-        //Handles.color = Color.white;
-        //DrawGrid();
+        Handles.zTest = UnityEngine.Rendering.CompareFunction.LessEqual;
+        Handles.color = new Color(1f, 1f, 1f, 0.1f);
+        DrawGrid();
 
-        //Handles.zTest = UnityEngine.Rendering.CompareFunction.Greater;
-        //Handles.color = Color.gray;
-        //DrawGrid();
+        Handles.zTest = UnityEngine.Rendering.CompareFunction.Greater;
+        Handles.color = new Color(0.5f, 0.5f, 0.5f, 0.1f);
+        DrawGrid();
     }
+
+    private class Chunk
+    {
+        public Chunk(int chunkSize)
+        {
+            this.isPainted = new bool[chunkSize, chunkSize];
+        }
+
+        public void ClearIsPainted()
+        {
+            this.isPainted = new bool[this.isPainted.GetLength(0), this.isPainted.GetLength(0)];
+        }
+
+        public bool[,] isPainted;
+    }
+
+    private Dictionary<(int, int), Chunk> _chunks = new Dictionary<(int, int), Chunk>();
+
+    private void OnCreateChunk(int x, int y)
+    {
+        Debug.Log($"OnCreateChunk: {x}, {y}");
+        _chunks.Add((x, y), new Chunk(_tileMap.chunkSize));
+    }
+
+    private void OnRemoveChunk(int x, int y)
+    {
+        Debug.Log($"OnRemoveChunk: {x}, {y}");
+        _chunks.Remove((x, y));
+    }
+
+    private void OnTileSet(int x, int y, CliffTileMap.Tile? tile)
+    {
+        Debug.Log($"OnTileSet: {x}, {y}, h: {(tile != null ? tile.Value.height : -999)}");
+        if (_isPaint)
+        {
+            (int localX, int localY) = _tileMap.GetLocalCoord(x, y);
+            _chunks[_tileMap.GetChunkCoord(x, y)].isPainted[localX, localY] = true;
+        }
+    }
+
+    private bool IsPainted(int x, int y)
+    {
+        (int localX, int localY) = _tileMap.GetLocalCoord(x, y);
+
+        Chunk chunk;
+        if (_chunks.TryGetValue(_tileMap.GetChunkCoord(x, y), out chunk))
+        {
+            return chunk.isPainted[localX, localY];
+        }
+
+        return false;
+    }
+
+    private void SetPainted(int x, int y)
+    {
+        (int localX, int localY) = _tileMap.GetLocalCoord(x, y);
+        _chunks[_tileMap.GetChunkCoord(x, y)].isPainted[localX, localY] = true;
+    }
+
 
     private void UpdateCursor()
     {
-        var tileMap = (TileMap)target;
-
         var plane = new Plane(Vector3.up, 0);
         var ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
@@ -91,8 +155,8 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
         if (plane.Raycast(ray, out d))
         {
             var p = ray.GetPoint(d);
-            p.x /= tileMap.block.x;
-            p.z /= tileMap.block.z;
+            p.x /= _tileMap.blockSize.x;
+            p.z /= _tileMap.blockSize.z;
 
             int _lastX = _x;
             int _lastY = _y;
@@ -100,9 +164,9 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
             _x = (int)Mathf.Floor(p.x);
             _y = (int)Mathf.Floor(p.z);
 
-            _isValid = tileMap.IsValid(_x, _y);
+            _isValid = true;
 
-            if (_isValid && _isPaint)
+            if (_isPaint)
             {
                 PaintLine(_lastX, _lastY, _x, _y);
             }
@@ -139,28 +203,36 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
 
     private void DrawGrid()
     {
-        var tileMap = (TileMap)target;
-
-        for (int x = 0; x <= tileMap.width; ++x)
+        foreach ((int chunkX, int chunkY) in _chunks.Keys)
         {
-            var p = tileMap.transform.position + new Vector3(x * tileMap.block.x, 0, 0);
-            Handles.DrawLine(p, p + new Vector3(0, 0, tileMap.height * tileMap.block.z));
-        }
+            var offset =
+                Vector3.Scale(new Vector3(chunkX * _tileMap.chunkSize, 0, chunkY * _tileMap.chunkSize), _tileMap.blockSize);
 
-        for (int y = 0; y <= tileMap.height; ++y)
-        {
-            var p = tileMap.transform.position + new Vector3(0, 0, y * tileMap.block.z);
-            Handles.DrawLine(p, p + new Vector3(tileMap.width * tileMap.block.x, 0, 0));
+            for (int x = 0; x <= _tileMap.chunkSize; ++x)
+            {
+                var p = offset + _tileMap.transform.position + new Vector3(x * _tileMap.blockSize.x, 0, 0);
+                Handles.DrawLine(p, p + new Vector3(0, 0, _tileMap.chunkSize * _tileMap.blockSize.z));
+            }
+
+            for (int y = 0; y <= _tileMap.chunkSize; ++y)
+            {
+                var p = offset + _tileMap.transform.position + new Vector3(0, 0, y * _tileMap.blockSize.z);
+                Handles.DrawLine(p, p + new Vector3(_tileMap.chunkSize * _tileMap.blockSize.x, 0, 0));
+            }
         }
     }
 
     private void BeginPaint()
     {
-        var tileMap = (TileMap)target;
+        var tileMap = (CliffTileMap)target;
 
         _isPaint = true;
         _isInverse = (Event.current.modifiers & EventModifiers.Shift) != EventModifiers.None;
-        _isPainted = new bool[tileMap.width, tileMap.height];
+
+        foreach (var chunk in _chunks.Values)
+        {
+            chunk.ClearIsPainted();
+        }
     }
 
     private void PaintLine(int x1, int y1, int x2, int y2)
@@ -168,8 +240,6 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
         Debug.Assert(_isPaint);
 
         BresenhamLine(x1, y1, x2, y2, (x, y) => Paint(x, y));
-
-        _tileMap.Generate();
     }
 
 
@@ -213,29 +283,26 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
     {
         Debug.Assert(_isPaint);
 
-        if (!_tileMap.IsValid(x, y))
+        if (!IsPainted(x, y))
         {
-            return;
-        }
+            CliffTileMap.Tile tile;
+            tile.height = _tileMap[x, y]?.height + (_isInverse ? -1 : +1) ?? 0;
+            _tileMap[x, y] = tile;
 
-        if (!_isPainted[x, y])
-        {
-            _tileMap.tiles[x, y].height += _isInverse ? -1 : +1;
-            _isPainted[x, y] = true;
+            SetPainted(x, y);
         }
     }
 
     private void EndPaint()
     {
         _isPaint = false;
-        _isPainted = null;
     }
 
     private void DrawBrush()
     {
         if (_isValid)
         {
-            DrawRect(_x, _y, _tileMap.tiles[_x, _y].height);
+            DrawRect(_x, _y, _tileMap[_x, _y]?.height ?? 0);
         }
     }
 
@@ -252,10 +319,10 @@ public class TileMapTool : EditorTool, IDrawSelectedHandles
 
     private void DrawRectPass(int x, int y, int z)
     {
-        var tileMap = (TileMap)target;
-        var py = tileMap.transform.position.y + z * tileMap.block.y + 0.1f;
-        var a = tileMap.transform.position + new Vector3(x * tileMap.block.x, 0, y * tileMap.block.z);
-        var b = tileMap.transform.position + new Vector3((x + 1) * tileMap.block.x, 0, (y + 1) * tileMap.block.z);
+        var tileMap = (CliffTileMap)target;
+        var py = tileMap.transform.position.y + z * tileMap.blockSize.y + 0.1f;
+        var a = tileMap.transform.position + new Vector3(x * tileMap.blockSize.x, 0, y * tileMap.blockSize.z);
+        var b = tileMap.transform.position + new Vector3((x + 1) * tileMap.blockSize.x, 0, (y + 1) * tileMap.blockSize.z);
 
         Vector3[] verts = new Vector3[]
         {
