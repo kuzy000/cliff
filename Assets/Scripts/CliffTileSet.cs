@@ -7,7 +7,7 @@ public class CliffTileSet : ScriptableObject
 {
     public enum Shape
     {
-        Plane, TwoSide, SideV, SideH, Hole
+        Plane, TwoSide, SideV, SideH, Hole, Unknown
     }
 
     [SerializeField] private Matrix4x4 _transform;
@@ -54,6 +54,7 @@ public class CliffTileSet : ScriptableObject
             case Shape.SideH: return sideH[index];
             case Shape.SideV: return sideV[index];
             case Shape.Hole: return hole[index];
+            case Shape.Unknown: return plane[index];
         }
 
         return null;

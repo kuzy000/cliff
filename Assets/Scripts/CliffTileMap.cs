@@ -128,6 +128,24 @@ public class CliffTileMap : MonoBehaviour
         }
     }
 
+    public bool CanSetTile(int x, int y, Tile? tile)
+    {
+        if (tile == null)
+        {
+            return true;
+        }
+
+        var tiles = new Tile?[9];
+        For3x3Grid(x, y, (i, x, y) =>
+        {
+            tiles[i] = GetTile(x, y);
+        });
+        tiles[4] = tile;
+
+        var shapes = GetShapes(x, y, tiles);
+        return Array.TrueForAll(shapes, shape => shape != CliffTileSet.Shape.Unknown);
+    }
+
     public void UpdateChunks()
     {
         foreach (var chunk in _chunks.Values)
@@ -140,37 +158,43 @@ public class CliffTileMap : MonoBehaviour
         }
     }
 
+    private CliffTileSet.Shape[] GetShapes(int x, int y, Tile?[] tiles)
+    {
+        Debug.Assert(tiles[4] != null);
+
+        var hs = new int[9];
+        for (int i = 0; i < hs.Length; ++i)
+        {
+            hs[i] = tiles[i] != null ? tiles[i].Value.height : 0;
+        }
+        int h = hs[4];
+
+        for (int i = 0; i < hs.Length; ++i)
+        {
+            hs[i] -= h;
+        }
+
+        return new CliffTileSet.Shape[]
+        {
+            ShapeByNeighborsHeight(hs[3], hs[6], hs[7]),
+            ShapeByNeighborsHeight(hs[5], hs[8], hs[7]),
+            ShapeByNeighborsHeight(hs[3], hs[0], hs[1]),
+            ShapeByNeighborsHeight(hs[5], hs[2], hs[1]),
+        };
+    }
+
     private void GenChunkMesh(Chunk chunk)
     {
         var gen = new CliffMeshGen(_tileSet, chunk.population);
         OnChunkNeighbors(chunk, (x, y, tiles) =>
         {
-            Tile? centerTile = tiles[4];
-            if (centerTile == null)
+            var tile = tiles[4];
+            if (tile == null)
             {
                 return;
             }
 
-            var hs = new int[9];
-            for (int i = 0; i < hs.Length; ++i)
-            {
-                hs[i] = tiles[i] != null ? tiles[i].Value.height : 0;
-            }
-            int h = hs[4];
-
-            for (int i = 0; i < hs.Length; ++i)
-            {
-                hs[i] -= h;
-            }
-
-            var shape1 = ShapeByNeighborsHeight(hs[3], hs[6], hs[7]);
-            var shape2 = ShapeByNeighborsHeight(hs[5], hs[8], hs[7]);
-            var shape3 = ShapeByNeighborsHeight(hs[3], hs[0], hs[1]);
-            var shape4 = ShapeByNeighborsHeight(hs[5], hs[2], hs[1]);
-
-            CliffTileSet.Shape[] shapes = new CliffTileSet.Shape[] { shape1, shape2, shape3, shape4 };
-
-            gen.Add(new Vector3Int(x, y, h - 1), shape1, shape2, shape3, shape4);
+            gen.Add(new Vector3Int(x, y, tile.Value.height - 1), GetShapes(x, y, tiles));
         });
 
         var mesh = new Mesh { name = $"CliffChunk{chunk.x}x{chunk.y}" };
@@ -245,6 +269,15 @@ public class CliffTileMap : MonoBehaviour
 
         return v switch
         {
+            { x: 0, y: 0, z: 0 } => CliffTileSet.Shape.Plane,
+            { x: 1, y: 0, z: 0 } => CliffTileSet.Shape.Plane,
+            { x: 0, y: 1, z: 0 } => CliffTileSet.Shape.Plane,
+            { x: 0, y: 0, z: 1 } => CliffTileSet.Shape.Plane,
+            { x: 1, y: 1, z: 0 } => CliffTileSet.Shape.Plane,
+            { x: 0, y: 1, z: 1 } => CliffTileSet.Shape.Plane,
+            { x: 1, y: 0, z: 1 } => CliffTileSet.Shape.Plane,
+            { x: 1, y: 1, z: 1 } => CliffTileSet.Shape.Plane,
+
             { x: -1, y: -0, z: -0 } => CliffTileSet.Shape.SideV,
             { x: -0, y: -1, z: -0 } => CliffTileSet.Shape.Hole,
             { x: -0, y: -0, z: -1 } => CliffTileSet.Shape.SideH,
@@ -254,7 +287,7 @@ public class CliffTileMap : MonoBehaviour
             { x: -0, y: -1, z: -1 } => CliffTileSet.Shape.SideH,
 
             { x: -1, y: -1, z: -1 } => CliffTileSet.Shape.TwoSide,
-            _ => CliffTileSet.Shape.Plane,
+            _ => CliffTileSet.Shape.Unknown,
         };
     }
 }

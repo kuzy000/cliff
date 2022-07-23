@@ -287,9 +287,12 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         {
             CliffTileMap.Tile tile;
             tile.height = _tileMap[x, y]?.height + (_isInverse ? -1 : +1) ?? 0;
-            _tileMap[x, y] = tile;
 
-            SetPainted(x, y);
+            if (_tileMap.CanSetTile(x, y, tile))
+            {
+                _tileMap[x, y] = tile;
+                SetPainted(x, y);
+            }
         }
     }
 
@@ -302,18 +305,21 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
     {
         if (_isValid)
         {
-            DrawRect(_x, _y, _tileMap[_x, _y]?.height ?? 0);
+            CliffTileMap.Tile tile;
+            tile.height = _tileMap[_x, _y]?.height + (_isInverse ? -1 : +1) ?? 0;
+
+            DrawRect(_x, _y, _tileMap[_x, _y]?.height ?? 0, !_tileMap.CanSetTile(_x, _y, tile));
         }
     }
 
-    private void DrawRect(int x, int y, int z)
+    private void DrawRect(int x, int y, int z, bool red)
     {
         Handles.zTest = UnityEngine.Rendering.CompareFunction.LessEqual;
-        Handles.color = new Color(0f, 1f, 0f, 1f);
+        Handles.color = red ? new Color(1f, 0f, 0f, 1f) : new Color(0f, 1f, 0f, 1f);
         DrawRectPass(x, y, z);
 
         Handles.zTest = UnityEngine.Rendering.CompareFunction.Greater;
-        Handles.color = new Color(0f, 0.4f, 0f, 1f);
+        Handles.color = red ? new Color(0.4f, 0f, 0f, 1f) : new Color(0f, 0.4f, 0f, 1f);
         DrawRectPass(x, y, z);
     }
 
