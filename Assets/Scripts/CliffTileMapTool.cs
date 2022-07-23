@@ -9,6 +9,17 @@ using UnityEditor.ShortcutManagement;
 [EditorTool("TileMap Tool", typeof(CliffTileMap))]
 public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
 {
+    public enum BrushShape
+    {
+        Rectangle,
+        Circle,
+    }
+
+    [SerializeField] public int brushSize => CliffEditor.tileMapEditor.toolBrushSize;
+    public BrushShape brushShape => CliffEditor.tileMapEditor.toolBrushShape;
+
+    //private int _brushSize = 3;
+
     private int _x;
     private int _y;
 
@@ -36,6 +47,19 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
             (int x, int y) = e.Current;
             OnCreateChunk(x, y);
         }
+
+        CliffEditor.SetTileMapTool(this);
+    }
+
+    void OnDisable()
+    {
+        Debug.Log("CliffTileMapTool.OnDisable");
+        CliffEditor.SetTileMapTool(null);
+
+        _tileMap.onCreateChunk -= OnCreateChunk;
+        _tileMap.onRemoveChunk -= OnRemoveChunk;
+        _tileMap.onTileSet -= OnTileSet;
+        _chunks.Clear();
     }
 
     public override void OnToolGUI(EditorWindow window)
@@ -62,7 +86,7 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
                     if (_isValid)
                     {
                         BeginPaint();
-                        Paint(_x, _y);
+                        PaintBrush(_x, _y);
                     }
                 }
                 break;
@@ -70,6 +94,20 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
             case EventType.MouseUp:
                 LockFocus(false);
                 EndPaint();
+                break;
+
+            case EventType.KeyDown:
+                switch (e.keyCode)
+                {
+                    case KeyCode.LeftBracket:
+                        CliffEditor.tileMapEditor.SetToolBrushSize(Math.Max(0, brushSize - 1));
+                        e.Use();
+                        break;
+                    case KeyCode.RightBracket:
+                        CliffEditor.tileMapEditor.SetToolBrushSize(Math.Min(32, brushSize + 1));
+                        e.Use();
+                        break;
+                }
                 break;
         }
 
@@ -155,6 +193,13 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         if (plane.Raycast(ray, out d))
         {
             var p = ray.GetPoint(d);
+
+            if (brushSize % 2 == 0)
+            {
+                p.x += _tileMap.blockSize.x * 0.5f;
+                p.z += _tileMap.blockSize.z * 0.5f;
+            }
+
             p.x /= _tileMap.blockSize.x;
             p.z /= _tileMap.blockSize.z;
 
@@ -168,7 +213,7 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
 
             if (_isPaint)
             {
-                PaintLine(_lastX, _lastY, _x, _y);
+                PaintBrushLine(_lastX, _lastY, _x, _y);
             }
         }
         else
@@ -198,6 +243,34 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
 
             GUIUtility.hotControl = _lastHotControl;
             _lastHotControl = -1;
+        }
+    }
+
+    private void ForEachBrushCell(int brushX, int brushY, Action<int, int> f)
+    {
+        int a = brushSize / 2;
+        int b = brushSize - a;
+
+        for (int y = brushY - a; y < brushY + b; ++y)
+        {
+            for (int x = brushX - a; x < brushX + b; ++x)
+            {
+                if (brushShape == BrushShape.Circle)
+                {
+                    float r = (float)brushSize / 2 - 0.25f;
+                    float fX = (x - brushX) + (brushSize % 2 == 0 ? 0.5f : 0f);
+                    float fY = (y - brushY) + (brushSize % 2 == 0 ? 0.5f : 0f);
+
+                    if (fX * fX + fY * fY < r * r)
+                    {
+                        f(x, y);
+                    }
+                }
+                else
+                {
+                    f(x, y);
+                }
+            }
         }
     }
 
@@ -235,11 +308,11 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         }
     }
 
-    private void PaintLine(int x1, int y1, int x2, int y2)
+    private void PaintBrushLine(int x1, int y1, int x2, int y2)
     {
         Debug.Assert(_isPaint);
 
-        BresenhamLine(x1, y1, x2, y2, (x, y) => Paint(x, y));
+        BresenhamLine(x1, y1, x2, y2, (x, y) => PaintBrush(x, y));
     }
 
 
@@ -279,21 +352,24 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         }
     }
 
-    private void Paint(int x, int y)
+    private void PaintBrush(int brushX, int brushY)
     {
         Debug.Assert(_isPaint);
 
-        if (!IsPainted(x, y))
+        ForEachBrushCell(brushX, brushY, (x, y) =>
         {
-            CliffTileMap.Tile tile;
-            tile.height = _tileMap[x, y]?.height + (_isInverse ? -1 : +1) ?? 0;
-
-            if (_tileMap.CanSetTile(x, y, tile))
+            if (!IsPainted(x, y))
             {
-                _tileMap[x, y] = tile;
-                SetPainted(x, y);
+                CliffTileMap.Tile tile;
+                tile.height = _tileMap[x, y]?.height + (_isInverse ? -1 : +1) ?? 0;
+
+                if (_tileMap.CanSetTile(x, y, tile))
+                {
+                    _tileMap[x, y] = tile;
+                    SetPainted(x, y);
+                }
             }
-        }
+        });
     }
 
     private void EndPaint()
@@ -305,10 +381,13 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
     {
         if (_isValid)
         {
-            CliffTileMap.Tile tile;
-            tile.height = _tileMap[_x, _y]?.height + (_isInverse ? -1 : +1) ?? 0;
+            ForEachBrushCell(_x, _y, (x, y) =>
+            {
+                CliffTileMap.Tile tile;
+                tile.height = _tileMap[x, y]?.height + (_isInverse ? -1 : +1) ?? 0;
 
-            DrawRect(_x, _y, _tileMap[_x, _y]?.height ?? 0, !_tileMap.CanSetTile(_x, _y, tile));
+                DrawRect(x, y, _tileMap[x, y]?.height ?? 0, !_tileMap.CanSetTile(x, y, tile));
+            });
         }
     }
 

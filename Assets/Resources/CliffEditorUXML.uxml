@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <uie:PropertyField binding-path="_tileSet" />
+    <uie:PropertyField binding-path="_chunkPrefab" />
+    <ui:SliderInt picking-mode="Ignore" label="Brush size" value="1" high-value="32" low-value="1" name="brush-size" show-input-field="true" />
+    <uie:EnumField label="Brush shape" name="brush-shape" />
+</ui:UXML>
