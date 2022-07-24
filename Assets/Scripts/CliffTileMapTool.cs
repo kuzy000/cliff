@@ -31,6 +31,9 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
     private bool _isInverse = false;
 
     private int _lastHotControl = -1;
+    private int _undoGroup = -1;
+
+    private string _undoTitle => "Paint on CliffTileMap";
 
     private CliffTileMap _tileMap;
     private CliffTileMapData _tileMapData;
@@ -299,6 +302,9 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         _isPaint = true;
         _isInverse = (Event.current.modifiers & EventModifiers.Shift) != EventModifiers.None;
         _chunks = new Dictionary<(int, int), ChunkData>();
+
+        Undo.RecordObject(_tileMapData, _undoTitle);
+        _undoGroup = Undo.GetCurrentGroup();
     }
 
     private void PaintBrushLine(int x1, int y1, int x2, int y2)
@@ -357,6 +363,8 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
 
                 if (CanSetTile(x, y, tile))
                 {
+                    Undo.RecordObject(_tileMapData, _undoTitle);
+
                     _tileMapData[x, y] = tile;
                     SetPainted(x, y);
                 }
@@ -382,6 +390,9 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
     {
         _isPaint = false;
         _chunks = null;
+
+        Undo.CollapseUndoOperations(_undoGroup);
+        _undoGroup = -1;
     }
 
     private void DrawBrush()

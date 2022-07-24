@@ -87,8 +87,6 @@ public class CliffTileMap : MonoBehaviour, ISerializationCallbackReceiver
 
     private void GenChunkMesh(CliffTileChunk chunk, ChunkData chunkData)
     {
-        Debug.Log($"GenChunk: ({chunk.x}, {chunk.y})");
-
         var gen = new CliffMeshGen(_tileSet, chunk.population);
         _tileMapData.ForChunkTileWithNeighbors(chunk, (x, y, tiles) =>
         {
