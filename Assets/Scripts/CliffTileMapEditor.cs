@@ -37,13 +37,11 @@ public class CliffTileMapEditor : Editor
 
     private void OnEnable()
     {
-        Debug.Log("CliffTileMapEditor.OnEnable");
         CliffEditor.SetTileMapEditor(this);
     }
 
     private void OnDisable()
     {
-        Debug.Log("CliffTileMapEditor.OnDisable");
         CliffEditor.SetTileMapEditor(null);
     }
 

@@ -60,6 +60,60 @@ public class CliffTileSet : ScriptableObject
         return null;
     }
 
+    public Shape[] GetTileShapes(int x, int y, CliffTile[] tileNeighbors)
+    {
+        Debug.Assert(!tileNeighbors[4].isEmpty);
+
+        var hs = new int[9];
+        for (int i = 0; i < hs.Length; ++i)
+        {
+            hs[i] = !tileNeighbors[i].isEmpty ? tileNeighbors[i].height : 0;
+        }
+        int h = hs[4];
+
+        for (int i = 0; i < hs.Length; ++i)
+        {
+            hs[i] -= h;
+        }
+
+        return new CliffTileSet.Shape[]
+        {
+            ShapeByNeighborsHeight(hs[3], hs[6], hs[7]),
+            ShapeByNeighborsHeight(hs[5], hs[8], hs[7]),
+            ShapeByNeighborsHeight(hs[3], hs[0], hs[1]),
+            ShapeByNeighborsHeight(hs[5], hs[2], hs[1]),
+        };
+    }
+
+
+    public CliffTileSet.Shape ShapeByNeighborsHeight(int n1, int n2, int n3)
+    {
+        var v = new Vector3Int(n1, n2, n3);
+
+        return v switch
+        {
+            { x: 0, y: 0, z: 0 } => CliffTileSet.Shape.Plane,
+            { x: 1, y: 0, z: 0 } => CliffTileSet.Shape.Plane,
+            { x: 0, y: 1, z: 0 } => CliffTileSet.Shape.Plane,
+            { x: 0, y: 0, z: 1 } => CliffTileSet.Shape.Plane,
+            { x: 1, y: 1, z: 0 } => CliffTileSet.Shape.Plane,
+            { x: 0, y: 1, z: 1 } => CliffTileSet.Shape.Plane,
+            { x: 1, y: 0, z: 1 } => CliffTileSet.Shape.Plane,
+            { x: 1, y: 1, z: 1 } => CliffTileSet.Shape.Plane,
+
+            { x: -1, y: -0, z: -0 } => CliffTileSet.Shape.SideV,
+            { x: -0, y: -1, z: -0 } => CliffTileSet.Shape.Hole,
+            { x: -0, y: -0, z: -1 } => CliffTileSet.Shape.SideH,
+
+            { x: -1, y: -1, z: -0 } => CliffTileSet.Shape.SideV,
+            { x: -1, y: -0, z: -1 } => CliffTileSet.Shape.TwoSide,
+            { x: -0, y: -1, z: -1 } => CliffTileSet.Shape.SideH,
+
+            { x: -1, y: -1, z: -1 } => CliffTileSet.Shape.TwoSide,
+            _ => CliffTileSet.Shape.Unknown,
+        };
+    }
+
     private void OnValidate()
     {
         Debug.Assert(blockSize.x > 0);

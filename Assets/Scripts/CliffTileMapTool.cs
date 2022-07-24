@@ -20,6 +20,8 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
 
     //private int _brushSize = 3;
 
+    private Vector3 blockSize => _tileMap.tileSet.blockSize;
+
     private int _x;
     private int _y;
 
@@ -31,35 +33,28 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
     private int _lastHotControl = -1;
 
     private CliffTileMap _tileMap;
+    private CliffTileMapData _tileMapData;
+
+    private Dictionary<(int, int), ChunkData> _chunks = new Dictionary<(int, int), ChunkData>();
 
     void OnEnable()
     {
-        Debug.Log("CliffTileMapTool.OnEnable");
-
-        _tileMap = (CliffTileMap)target;
-        _tileMap.onCreateChunk += OnCreateChunk;
-        _tileMap.onRemoveChunk += OnRemoveChunk;
-        _tileMap.onTileSet += OnTileSet;
-
-        var e = _tileMap.chunkEnumerator;
-        while (e.MoveNext())
-        {
-            (int x, int y) = e.Current;
-            OnCreateChunk(x, y);
-        }
-
         CliffEditor.SetTileMapTool(this);
+        BindToTileMap();
     }
 
     void OnDisable()
     {
-        Debug.Log("CliffTileMapTool.OnDisable");
         CliffEditor.SetTileMapTool(null);
 
-        _tileMap.onCreateChunk -= OnCreateChunk;
-        _tileMap.onRemoveChunk -= OnRemoveChunk;
-        _tileMap.onTileSet -= OnTileSet;
-        _chunks.Clear();
+        _tileMap = null;
+        _tileMapData = null;
+    }
+
+    private void BindToTileMap()
+    {
+        _tileMap = (CliffTileMap)target;
+        _tileMapData = _tileMap.tileMapData;
     }
 
     public override void OnToolGUI(EditorWindow window)
@@ -68,6 +63,13 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         {
             return;
         }
+
+        BindToTileMap();
+        if (_tileMapData == null)
+        {
+            return;
+        }
+
         var tileMap = (CliffTileMap)target;
         Handles.zTest = UnityEngine.Rendering.CompareFunction.Disabled;
 
@@ -111,7 +113,7 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
                 break;
         }
 
-        _tileMap.UpdateChunks();
+        _tileMap.SyncWithData();
     }
 
     public void OnDrawHandles()
@@ -125,53 +127,24 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         DrawGrid();
     }
 
-    private class Chunk
+    private class ChunkData
     {
-        public Chunk(int chunkSize)
+        public ChunkData(int chunkSize)
         {
             this.isPainted = new bool[chunkSize, chunkSize];
-        }
-
-        public void ClearIsPainted()
-        {
-            this.isPainted = new bool[this.isPainted.GetLength(0), this.isPainted.GetLength(0)];
         }
 
         public bool[,] isPainted;
     }
 
-    private Dictionary<(int, int), Chunk> _chunks = new Dictionary<(int, int), Chunk>();
-
-    private void OnCreateChunk(int x, int y)
-    {
-        Debug.Log($"OnCreateChunk: {x}, {y}");
-        _chunks.Add((x, y), new Chunk(_tileMap.chunkSize));
-    }
-
-    private void OnRemoveChunk(int x, int y)
-    {
-        Debug.Log($"OnRemoveChunk: {x}, {y}");
-        _chunks.Remove((x, y));
-    }
-
-    private void OnTileSet(int x, int y, CliffTileMap.Tile? tile)
-    {
-        Debug.Log($"OnTileSet: {x}, {y}, h: {(tile != null ? tile.Value.height : -999)}");
-        if (_isPaint)
-        {
-            (int localX, int localY) = _tileMap.GetLocalCoord(x, y);
-            _chunks[_tileMap.GetChunkCoord(x, y)].isPainted[localX, localY] = true;
-        }
-    }
-
     private bool IsPainted(int x, int y)
     {
-        (int localX, int localY) = _tileMap.GetLocalCoord(x, y);
+        (int localX, int localY) = _tileMapData.GetLocalCoord(x, y);
 
-        Chunk chunk;
-        if (_chunks.TryGetValue(_tileMap.GetChunkCoord(x, y), out chunk))
+        ChunkData chunkData;
+        if (_chunks.TryGetValue(_tileMapData.GetChunkCoord(x, y), out chunkData))
         {
-            return chunk.isPainted[localX, localY];
+            return chunkData.isPainted[localX, localY];
         }
 
         return false;
@@ -179,10 +152,18 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
 
     private void SetPainted(int x, int y)
     {
-        (int localX, int localY) = _tileMap.GetLocalCoord(x, y);
-        _chunks[_tileMap.GetChunkCoord(x, y)].isPainted[localX, localY] = true;
-    }
+        var chunkXY = _tileMapData.GetChunkCoord(x, y);
 
+        ChunkData chunkData;
+        if (!_chunks.TryGetValue(chunkXY, out chunkData))
+        {
+            chunkData = new ChunkData(_tileMapData.chunkSize);
+            _chunks.Add(chunkXY, chunkData);
+        }
+
+        (int localX, int localY) = _tileMapData.GetLocalCoord(x, y);
+        chunkData.isPainted[localX, localY] = true;
+    }
 
     private void UpdateCursor()
     {
@@ -196,12 +177,12 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
 
             if (brushSize % 2 == 0)
             {
-                p.x += _tileMap.blockSize.x * 0.5f;
-                p.z += _tileMap.blockSize.z * 0.5f;
+                p.x += blockSize.x * 0.5f;
+                p.z += blockSize.z * 0.5f;
             }
 
-            p.x /= _tileMap.blockSize.x;
-            p.z /= _tileMap.blockSize.z;
+            p.x /= blockSize.x;
+            p.z /= blockSize.z;
 
             int _lastX = _x;
             int _lastY = _y;
@@ -274,38 +255,50 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         }
     }
 
+    public bool CanSetTile(int x, int y, CliffTile tile)
+    {
+        if (tile.isEmpty)
+        {
+            return true;
+        }
+
+        var tiles = new CliffTile[9];
+        _tileMap.tileMapData.ForTileNeighbors(x, y, (i, x, y) =>
+        {
+            tiles[i] = _tileMap.tileMapData[x, y];
+        });
+        tiles[4] = tile;
+
+        var shapes = _tileMap.tileSet.GetTileShapes(x, y, tiles);
+        return Array.TrueForAll(shapes, shape => shape != CliffTileSet.Shape.Unknown);
+    }
+
     private void DrawGrid()
     {
-        foreach ((int chunkX, int chunkY) in _chunks.Keys)
+        foreach (var chunk in _tileMapData.chunks)
         {
             var offset =
-                Vector3.Scale(new Vector3(chunkX * _tileMap.chunkSize, 0, chunkY * _tileMap.chunkSize), _tileMap.blockSize);
+                Vector3.Scale(new Vector3(chunk.x * _tileMapData.chunkSize, 0, chunk.y * _tileMapData.chunkSize), blockSize);
 
-            for (int x = 0; x <= _tileMap.chunkSize; ++x)
+            for (int x = 0; x <= _tileMapData.chunkSize; ++x)
             {
-                var p = offset + _tileMap.transform.position + new Vector3(x * _tileMap.blockSize.x, 0, 0);
-                Handles.DrawLine(p, p + new Vector3(0, 0, _tileMap.chunkSize * _tileMap.blockSize.z));
+                var p = offset + _tileMap.transform.position + new Vector3(x * blockSize.x, 0, 0);
+                Handles.DrawLine(p, p + new Vector3(0, 0, _tileMapData.chunkSize * blockSize.z));
             }
 
-            for (int y = 0; y <= _tileMap.chunkSize; ++y)
+            for (int y = 0; y <= _tileMapData.chunkSize; ++y)
             {
-                var p = offset + _tileMap.transform.position + new Vector3(0, 0, y * _tileMap.blockSize.z);
-                Handles.DrawLine(p, p + new Vector3(_tileMap.chunkSize * _tileMap.blockSize.x, 0, 0));
+                var p = offset + _tileMap.transform.position + new Vector3(0, 0, y * blockSize.z);
+                Handles.DrawLine(p, p + new Vector3(_tileMapData.chunkSize * blockSize.x, 0, 0));
             }
         }
     }
 
     private void BeginPaint()
     {
-        var tileMap = (CliffTileMap)target;
-
         _isPaint = true;
         _isInverse = (Event.current.modifiers & EventModifiers.Shift) != EventModifiers.None;
-
-        foreach (var chunk in _chunks.Values)
-        {
-            chunk.ClearIsPainted();
-        }
+        _chunks = new Dictionary<(int, int), ChunkData>();
     }
 
     private void PaintBrushLine(int x1, int y1, int x2, int y2)
@@ -360,21 +353,35 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         {
             if (!IsPainted(x, y))
             {
-                CliffTileMap.Tile tile;
-                tile.height = _tileMap[x, y]?.height + (_isInverse ? -1 : +1) ?? 0;
+                var tile = PaintTile(_tileMapData[x, y]);
 
-                if (_tileMap.CanSetTile(x, y, tile))
+                if (CanSetTile(x, y, tile))
                 {
-                    _tileMap[x, y] = tile;
+                    _tileMapData[x, y] = tile;
                     SetPainted(x, y);
                 }
             }
         });
     }
 
+    private CliffTile PaintTile(CliffTile tile)
+    {
+        if (tile.isEmpty)
+        {
+            tile.height = 0;
+        }
+        else
+        {
+            tile.height += _isInverse ? -1 : +1;
+        }
+
+        return tile;
+    }
+
     private void EndPaint()
     {
         _isPaint = false;
+        _chunks = null;
     }
 
     private void DrawBrush()
@@ -383,10 +390,10 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         {
             ForEachBrushCell(_x, _y, (x, y) =>
             {
-                CliffTileMap.Tile tile;
-                tile.height = _tileMap[x, y]?.height + (_isInverse ? -1 : +1) ?? 0;
+                var tile = _tileMapData[x, y];
+                int h = !tile.isEmpty ? tile.height : 0;
 
-                DrawRect(x, y, _tileMap[x, y]?.height ?? 0, !_tileMap.CanSetTile(x, y, tile));
+                DrawRect(x, y, h, !CanSetTile(x, y, PaintTile(tile)));
             });
         }
     }
@@ -405,9 +412,9 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
     private void DrawRectPass(int x, int y, int z)
     {
         var tileMap = (CliffTileMap)target;
-        var py = tileMap.transform.position.y + z * tileMap.blockSize.y + 0.1f;
-        var a = tileMap.transform.position + new Vector3(x * tileMap.blockSize.x, 0, y * tileMap.blockSize.z);
-        var b = tileMap.transform.position + new Vector3((x + 1) * tileMap.blockSize.x, 0, (y + 1) * tileMap.blockSize.z);
+        var py = tileMap.transform.position.y + z * blockSize.y + 0.1f;
+        var a = tileMap.transform.position + new Vector3(x * blockSize.x, 0, y * blockSize.z);
+        var b = tileMap.transform.position + new Vector3((x + 1) * blockSize.x, 0, (y + 1) * blockSize.z);
 
         Vector3[] verts = new Vector3[]
         {
