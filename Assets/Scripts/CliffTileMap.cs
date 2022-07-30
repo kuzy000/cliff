@@ -46,7 +46,7 @@ public class CliffTileMap : MonoBehaviour, ISerializationCallbackReceiver
             if (chunkData.meshFilter == null)
             {
                 var pos = Vector3.Scale(new Vector3(chunk.x, 0, chunk.y), _tileSet.blockSize) * tileMapData.chunkSize;
-                chunkData.meshFilter = Instantiate<MeshFilter>(_chunkPrefab, pos, Quaternion.identity, transform);
+                chunkData.meshFilter = CliffUtility.InstantiatePrefab<MeshFilter>(_chunkPrefab, pos, Quaternion.identity, transform);
                 chunkData.meshFilter.gameObject.name = $"Chunk {chunk.x}x{chunk.y}";
                 chunkData.nonce = 0;
             }
