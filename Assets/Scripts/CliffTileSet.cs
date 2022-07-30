@@ -1,117 +1,96 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+
+public struct CliffTileShape
+{
+    public static CliffTileShape invalid => new CliffTileShape(-1);
+
+    public CliffTileShape(int value)
+    {
+        this.value = value;
+    }
+
+    public bool isValid => value >= 0;
+
+    public int value { get; private set; }
+}
 
 [CreateAssetMenu(fileName = "CliffTileSet", menuName = "Cliff/TileSet", order = 1)]
 public class CliffTileSet : ScriptableObject
 {
-    public enum Shape
-    {
-        Plane, TwoSide, SideV, SideH, Hole, Unknown
-    }
-
     [SerializeField] private Matrix4x4 _transform;
     [SerializeField] private Vector3 _blockSize;
 
-    [SerializeField] private Mesh _plane1;
-    [SerializeField] private Mesh _plane2;
-    [SerializeField] private Mesh _plane3;
-    [SerializeField] private Mesh _plane4;
+    [SerializeField] private Mesh _cliff0000;
+    [SerializeField] private Mesh _cliff0001;
+    [SerializeField] private Mesh _cliff0010;
+    [SerializeField] private Mesh _cliff0011;
+    [SerializeField] private Mesh _cliff0100;
+    [SerializeField] private Mesh _cliff0101;
+    [SerializeField] private Mesh _cliff0110;
+    [SerializeField] private Mesh _cliff0111;
+    [SerializeField] private Mesh _cliff1000;
+    [SerializeField] private Mesh _cliff1001;
+    [SerializeField] private Mesh _cliff1010;
+    [SerializeField] private Mesh _cliff1011;
+    [SerializeField] private Mesh _cliff1100;
+    [SerializeField] private Mesh _cliff1101;
+    [SerializeField] private Mesh _cliff1110;
+    [SerializeField] private Mesh _cliff1111;
 
-    [SerializeField] private Mesh _twoSide1;
-    [SerializeField] private Mesh _twoSide2;
-    [SerializeField] private Mesh _twoSide3;
-    [SerializeField] private Mesh _twoSide4;
-
-    [SerializeField] private Mesh _sideH1;
-    [SerializeField] private Mesh _sideH2;
-    [SerializeField] private Mesh _sideH3;
-    [SerializeField] private Mesh _sideH4;
-
-    [SerializeField] private Mesh _sideV1;
-    [SerializeField] private Mesh _sideV2;
-    [SerializeField] private Mesh _sideV3;
-    [SerializeField] private Mesh _sideV4;
-
-    [SerializeField] private Mesh _hole1;
-    [SerializeField] private Mesh _hole2;
-    [SerializeField] private Mesh _hole3;
-    [SerializeField] private Mesh _hole4;
+    public Mesh GetMesh(CliffTileShape shape) => shape.value switch
+    {
+        0b0000 => _cliff0000,
+        0b0001 => _cliff0001,
+        0b0010 => _cliff0010,
+        0b0011 => _cliff0011,
+        0b0100 => _cliff0100,
+        0b0101 => _cliff0101,
+        0b0110 => _cliff0110,
+        0b0111 => _cliff0111,
+        0b1000 => _cliff1000,
+        0b1001 => _cliff1001,
+        0b1010 => _cliff1010,
+        0b1011 => _cliff1011,
+        0b1100 => _cliff1100,
+        0b1101 => _cliff1101,
+        0b1110 => _cliff1110,
+        0b1111 => _cliff1111,
+        _ => throw new InvalidOperationException($"shape.value = {shape.value}"),
+    };
 
     public Vector3 blockSize => _blockSize;
-    public Mesh[] plane => new Mesh[] { _plane1, _plane2, _plane3, _plane4 };
-    public Mesh[] twoSide => new Mesh[] { _twoSide1, _twoSide2, _twoSide3, _twoSide4 };
-    public Mesh[] sideH => new Mesh[] { _sideH1, _sideH2, _sideH3, _sideH4 };
-    public Mesh[] sideV => new Mesh[] { _sideV1, _sideV2, _sideV3, _sideV4 };
-    public Mesh[] hole => new Mesh[] { _hole1, _hole2, _hole3, _hole4 };
 
-    public Mesh GetMesh(Shape kind, int index)
+    public void GetHeightAndShape(CliffTile tile, out int height, out CliffTileShape shape)
     {
-        switch (kind)
+        if (tile.isEmpty)
         {
-            case Shape.Plane: return plane[index];
-            case Shape.TwoSide: return twoSide[index];
-            case Shape.SideH: return sideH[index];
-            case Shape.SideV: return sideV[index];
-            case Shape.Hole: return hole[index];
-            case Shape.Unknown: return plane[index];
+            height = 0;
+            shape = CliffTileShape.invalid;
+            return;
         }
 
-        return null;
-    }
+        int heightMin = tile.Aggregate(int.MaxValue, (acc, e) => Math.Min(acc, e.height));
+        int heightMax = tile.Aggregate(int.MinValue, (acc, e) => Math.Max(acc, e.height));
 
-    public Shape[] GetTileShapes(int x, int y, CliffTile[] tileNeighbors)
-    {
-        Debug.Assert(!tileNeighbors[4].isEmpty);
+        height = heightMin;
 
-        var hs = new int[9];
-        for (int i = 0; i < hs.Length; ++i)
+        if (heightMax - height > 1)
         {
-            hs[i] = !tileNeighbors[i].isEmpty ? tileNeighbors[i].height : 0;
-        }
-        int h = hs[4];
-
-        for (int i = 0; i < hs.Length; ++i)
-        {
-            hs[i] -= h;
+            shape = CliffTileShape.invalid;
+            return;
         }
 
-        return new CliffTileSet.Shape[]
-        {
-            ShapeByNeighborsHeight(hs[3], hs[6], hs[7]),
-            ShapeByNeighborsHeight(hs[5], hs[8], hs[7]),
-            ShapeByNeighborsHeight(hs[3], hs[0], hs[1]),
-            ShapeByNeighborsHeight(hs[5], hs[2], hs[1]),
-        };
-    }
+        int shapeValue
+            = ((tile[0].height - height) << 0)
+            | ((tile[1].height - height) << 1)
+            | ((tile[2].height - height) << 2)
+            | ((tile[3].height - height) << 3);
 
-
-    public CliffTileSet.Shape ShapeByNeighborsHeight(int n1, int n2, int n3)
-    {
-        var v = new Vector3Int(n1, n2, n3);
-
-        return v switch
-        {
-            { x: 0, y: 0, z: 0 } => CliffTileSet.Shape.Plane,
-            { x: 1, y: 0, z: 0 } => CliffTileSet.Shape.Plane,
-            { x: 0, y: 1, z: 0 } => CliffTileSet.Shape.Plane,
-            { x: 0, y: 0, z: 1 } => CliffTileSet.Shape.Plane,
-            { x: 1, y: 1, z: 0 } => CliffTileSet.Shape.Plane,
-            { x: 0, y: 1, z: 1 } => CliffTileSet.Shape.Plane,
-            { x: 1, y: 0, z: 1 } => CliffTileSet.Shape.Plane,
-            { x: 1, y: 1, z: 1 } => CliffTileSet.Shape.Plane,
-
-            { x: -1, y: -0, z: -0 } => CliffTileSet.Shape.SideV,
-            { x: -0, y: -1, z: -0 } => CliffTileSet.Shape.Hole,
-            { x: -0, y: -0, z: -1 } => CliffTileSet.Shape.SideH,
-
-            { x: -1, y: -1, z: -0 } => CliffTileSet.Shape.SideV,
-            { x: -1, y: -0, z: -1 } => CliffTileSet.Shape.TwoSide,
-            { x: -0, y: -1, z: -1 } => CliffTileSet.Shape.SideH,
-
-            { x: -1, y: -1, z: -1 } => CliffTileSet.Shape.TwoSide,
-            _ => CliffTileSet.Shape.Unknown,
-        };
+        shape = new CliffTileShape(shapeValue);
     }
 
     private void OnValidate()

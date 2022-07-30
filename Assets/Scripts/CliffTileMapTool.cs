@@ -177,6 +177,7 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         if (plane.Raycast(ray, out d))
         {
             var p = ray.GetPoint(d);
+            p += new Vector3(blockSize.x, 0, blockSize.z) * 0.5f;
 
             if (brushSize % 2 == 0)
             {
@@ -258,22 +259,46 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         }
     }
 
-    public bool CanSetTile(int x, int y, CliffTile tile)
+    public bool CanSetVertex(int x, int y, CliffVertex vertex)
     {
-        if (tile.isEmpty)
+        var bl = _tileMapData.GetTile(x - 1, y - 1);
+        var br = _tileMapData.GetTile(x - 0, y - 1);
+        var tr = _tileMapData.GetTile(x - 0, y - 0);
+        var tl = _tileMapData.GetTile(x - 1, y - 0);
+
+        bl.tr = vertex;
+        br.tl = vertex;
+        tr.bl = vertex;
+        tl.br = vertex;
+
+        int height;
+        CliffTileShape shape;
+
+        _tileMap.tileSet.GetHeightAndShape(bl, out height, out shape);
+        if (!shape.isValid)
         {
-            return true;
+            return false;
         }
 
-        var tiles = new CliffTile[9];
-        _tileMap.tileMapData.ForTileNeighbors(x, y, (i, x, y) =>
+        _tileMap.tileSet.GetHeightAndShape(br, out height, out shape);
+        if (!shape.isValid)
         {
-            tiles[i] = _tileMap.tileMapData[x, y];
-        });
-        tiles[4] = tile;
+            return false;
+        }
 
-        var shapes = _tileMap.tileSet.GetTileShapes(x, y, tiles);
-        return Array.TrueForAll(shapes, shape => shape != CliffTileSet.Shape.Unknown);
+        _tileMap.tileSet.GetHeightAndShape(tr, out height, out shape);
+        if (!shape.isValid)
+        {
+            return false;
+        }
+
+        _tileMap.tileSet.GetHeightAndShape(tl, out height, out shape);
+        if (!shape.isValid)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private void DrawGrid()
@@ -359,31 +384,31 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         {
             if (!IsPainted(x, y))
             {
-                var tile = PaintTile(_tileMapData[x, y]);
+                var vertex = PaintVertex(_tileMapData[x, y]);
 
-                if (CanSetTile(x, y, tile))
+                if (CanSetVertex(x, y, vertex))
                 {
                     Undo.RecordObject(_tileMapData, _undoTitle);
 
-                    _tileMapData[x, y] = tile;
+                    _tileMapData[x, y] = vertex;
                     SetPainted(x, y);
                 }
             }
         });
     }
 
-    private CliffTile PaintTile(CliffTile tile)
+    private CliffVertex PaintVertex(CliffVertex vertex)
     {
-        if (tile.isEmpty)
+        if (vertex.isEmpty)
         {
-            tile.height = 0;
+            vertex.height = 1;
         }
         else
         {
-            tile.height += _isInverse ? -1 : +1;
+            vertex.height += _isInverse ? -1 : +1;
         }
 
-        return tile;
+        return vertex;
     }
 
     private void EndPaint()
@@ -401,10 +426,9 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
         {
             ForEachBrushCell(_x, _y, (x, y) =>
             {
-                var tile = _tileMapData[x, y];
-                int h = !tile.isEmpty ? tile.height : 0;
+                var vertex = _tileMapData[x, y];
 
-                DrawRect(x, y, h, !CanSetTile(x, y, PaintTile(tile)));
+                DrawRect(x, y, vertex.height, !CanSetVertex(x, y, PaintVertex(vertex)));
             });
         }
     }
@@ -424,8 +448,9 @@ public class CliffTileMapTool : EditorTool, IDrawSelectedHandles
     {
         var tileMap = (CliffTileMap)target;
         var py = tileMap.transform.position.y + z * blockSize.y + 0.1f;
-        var a = tileMap.transform.position + new Vector3(x * blockSize.x, 0, y * blockSize.z);
-        var b = tileMap.transform.position + new Vector3((x + 1) * blockSize.x, 0, (y + 1) * blockSize.z);
+        var half = new Vector3(blockSize.x, 0, blockSize.z) * 0.5f;
+        var a = tileMap.transform.position + new Vector3(x * blockSize.x, 0, y * blockSize.z) - half;
+        var b = tileMap.transform.position + new Vector3((x + 1) * blockSize.x, 0, (y + 1) * blockSize.z) - half;
 
         Vector3[] verts = new Vector3[]
         {

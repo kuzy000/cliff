@@ -5,27 +5,66 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [Serializable]
-public struct CliffTile
+public struct CliffVertex
 {
-    public static CliffTile empty => new CliffTile(int.MinValue);
+    public static CliffVertex empty => new CliffVertex(int.MinValue);
     public bool isEmpty => Equals(empty);
+    public int height { get => isEmpty ? 0 : _height; set => _height = value; }
 
-    public CliffTile(int height)
+    public CliffVertex(int height)
     {
-        this.height = height;
+        this._height = height;
     }
 
-    [SerializeField] public int height;
+    [SerializeField] private int _height;
 
     public override bool Equals(object obj) =>
-        obj is CliffTile tile
-            && this.height == tile.height;
+        obj is CliffVertex tile
+            && this._height == tile._height;
 
-    public override int GetHashCode() => this.height.GetHashCode();
+    public override int GetHashCode() => this._height.GetHashCode();
+}
+
+public struct CliffTile : IEnumerable<CliffVertex>
+{
+    public CliffTile(CliffVertex bl, CliffVertex br, CliffVertex tr, CliffVertex tl)
+    {
+        this.bl = bl;
+        this.br = br;
+        this.tr = tr;
+        this.tl = tl;
+    }
+
+    public CliffVertex bl { get; set; }
+    public CliffVertex br { get; set; }
+    public CliffVertex tr { get; set; }
+    public CliffVertex tl { get; set; }
+
+    public bool isEmpty
+        => bl.isEmpty && br.isEmpty && tr.isEmpty && tl.isEmpty;
+
+    public CliffVertex this[int index] => index switch
+    {
+        0 => bl,
+        1 => br,
+        2 => tr,
+        3 => tl,
+        _ => throw new InvalidOperationException($"index = {index}"),
+    };
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public IEnumerator<CliffVertex> GetEnumerator()
+    {
+        yield return bl;
+        yield return br;
+        yield return tr;
+        yield return tl;
+    }
 }
 
 [Serializable]
-public class CliffTileChunk
+public class CliffChunk
 {
     public int x => _x;
     public int y => _y;
@@ -33,40 +72,39 @@ public class CliffTileChunk
     public int population => _population;
     public uint nonce => _nonce;
 
-    public CliffTile this[int x, int y]
+    public CliffVertex this[int x, int y]
     {
-        get => _tiles[x + y * _chunkSize];
+        get => _vertices[x + y * _chunkSize];
         set
         {
             int index = x + y * _chunkSize;
-            if (_tiles[index].isEmpty && !value.isEmpty)
+            if (_vertices[index].isEmpty && !value.isEmpty)
             {
                 _population += 1;
             }
 
-            if (!_tiles[index].isEmpty && value.isEmpty)
+            if (!_vertices[index].isEmpty && value.isEmpty)
             {
                 _population -= 1;
             }
 
-            if (!_tiles.Equals(value))
+            if (!_vertices.Equals(value))
             {
-                _tiles[index] = value;
+                _vertices[index] = value;
                 UpdateNonce();
             }
         }
     }
 
-    public CliffTileChunk(int x, int y, int chunkSize)
+    public CliffChunk(int x, int y, int chunkSize)
     {
         this._x = x;
         this._y = y;
         this._population = 0;
         this._chunkSize = chunkSize;
         this._nonce = 1;
-        this._tiles = new CliffTile[chunkSize * chunkSize];
-        Array.Fill(this._tiles, CliffTile.empty);
-
+        this._vertices = new CliffVertex[chunkSize * chunkSize];
+        Array.Fill(this._vertices, CliffVertex.empty);
     }
 
     public void UpdateNonce()
@@ -77,7 +115,7 @@ public class CliffTileChunk
     [SerializeField] private int _x;
     [SerializeField] private int _y;
     [SerializeField] private uint _nonce;
-    [SerializeField] private CliffTile[] _tiles;
+    [SerializeField] private CliffVertex[] _vertices;
 
     // TODO infer it from above
     [SerializeField] private int _population;
@@ -88,15 +126,15 @@ public class CliffTileChunk
 public class CliffTileMapData : ScriptableObject, ISerializationCallbackReceiver
 {
     public int chunkSize { get => 16; }
-    public ReadOnlyCollection<CliffTileChunk> chunks => new ReadOnlyCollection<CliffTileChunk>(_chunksList);
+    public ReadOnlyCollection<CliffChunk> chunks => new ReadOnlyCollection<CliffChunk>(_chunksList);
 
-    [SerializeField] private List<CliffTileChunk> _chunksList = new List<CliffTileChunk>();
-    private Dictionary<(int, int), CliffTileChunk> _chunks = new Dictionary<(int, int), CliffTileChunk>();
+    [SerializeField] private List<CliffChunk> _chunksList = new List<CliffChunk>();
+    private Dictionary<(int, int), CliffChunk> _chunks = new Dictionary<(int, int), CliffChunk>();
 
-    public CliffTile this[int x, int y]
+    public CliffVertex this[int x, int y]
     {
-        get => GetTile(x, y);
-        set => SetTile(x, y, value);
+        get => GetVertex(x, y);
+        set => SetVertex(x, y, value);
     }
 
     public (int, int) GetChunkCoord(int x, int y) => (
@@ -107,9 +145,9 @@ public class CliffTileMapData : ScriptableObject, ISerializationCallbackReceiver
     public (int, int) GetLocalCoord(int x, int y) =>
         ((x % chunkSize + chunkSize) % chunkSize, (y % chunkSize + chunkSize) % chunkSize);
 
-    public CliffTileChunk GetChunk(int chunkX, int chunkY)
+    public CliffChunk GetChunk(int chunkX, int chunkY)
     {
-        CliffTileChunk chunk;
+        CliffChunk chunk;
         if (_chunks.TryGetValue((chunkX, chunkY), out chunk))
         {
             return chunk;
@@ -117,37 +155,37 @@ public class CliffTileMapData : ScriptableObject, ISerializationCallbackReceiver
         return null;
     }
 
-    public CliffTileChunk GetChunkOfTile(int x, int y)
+    public CliffChunk GetChunkOfVertex(int x, int y)
     {
         (int chunkX, int chunkY) = GetChunkCoord(x, y);
         return GetChunk(chunkX, chunkY);
     }
 
-    public CliffTile GetTile(int x, int y)
+    public CliffVertex GetVertex(int x, int y)
     {
-        CliffTileChunk chunk;
+        CliffChunk chunk;
         if (!_chunks.TryGetValue(GetChunkCoord(x, y), out chunk))
         {
-            return CliffTile.empty;
+            return CliffVertex.empty;
         }
 
         (int localX, int localY) = GetLocalCoord(x, y);
         return chunk[localX, localY];
     }
 
-    public void SetTile(int x, int y, CliffTile tile)
+    public void SetVertex(int x, int y, CliffVertex vertex)
     {
         (int chunkX, int chunkY) = GetChunkCoord(x, y);
 
-        CliffTileChunk chunk;
+        CliffChunk chunk;
         if (!_chunks.TryGetValue((chunkX, chunkY), out chunk))
         {
-            if (tile.isEmpty)
+            if (vertex.isEmpty)
             {
                 return;
             }
 
-            chunk = new CliffTileChunk(chunkX, chunkY, chunkSize);
+            chunk = new CliffChunk(chunkX, chunkY, chunkSize);
             _chunks.Add((chunkX, chunkY), chunk);
             _chunksList.Add(chunk);
         }
@@ -155,19 +193,19 @@ public class CliffTileMapData : ScriptableObject, ISerializationCallbackReceiver
         int localX = (x % chunkSize + chunkSize) % chunkSize;
         int localY = (y % chunkSize + chunkSize) % chunkSize;
 
-        if (!chunk[localX, localY].Equals(tile))
+        if (!chunk[localX, localY].Equals(vertex))
         {
-            var oldTile = chunk[localX, localY];
-            chunk[localX, localY] = tile;
+            var oldVertex = chunk[localX, localY];
+            chunk[localX, localY] = vertex;
 
             UnityEditor.EditorUtility.SetDirty(this);
 
             // Mark dirty neighbors
             if (localX == 0 || localY == 0 || localX == chunkSize - 1 || localY == chunkSize - 1)
             {
-                ForTileNeighbors(x, y, (i, x, y) =>
+                ForVertexNeighbors(x, y, (i, x, y) =>
                 {
-                    var chunk = GetChunkOfTile(x, y);
+                    var chunk = GetChunkOfVertex(x, y);
                     if (chunk != null)
                     {
                         chunk.UpdateNonce();
@@ -195,7 +233,17 @@ public class CliffTileMapData : ScriptableObject, ISerializationCallbackReceiver
         }
     }
 
-    public void ForChunkTileWithNeighbors(CliffTileChunk chunk, Action<int, int, CliffTile[]> f)
+    public CliffTile GetTile(int x, int y)
+    {
+        return new CliffTile(
+            GetVertex(x + 0, y + 0),
+            GetVertex(x + 1, y + 0),
+            GetVertex(x + 1, y + 1),
+            GetVertex(x + 0, y + 1)
+        );
+    }
+
+    public void ForChunkTiles(CliffChunk chunk, Action<int, int, CliffTile> f)
     {
         int offsetX = chunk.x * chunkSize;
         int offsetY = chunk.y * chunkSize;
@@ -204,18 +252,12 @@ public class CliffTileMapData : ScriptableObject, ISerializationCallbackReceiver
         {
             for (int x = 0; x < chunkSize; ++x)
             {
-                var tiles = new CliffTile[9];
-                ForTileNeighbors(offsetX + x, offsetY + y, (i, x, y) =>
-                {
-                    tiles[i] = GetTile(x, y);
-                });
-
-                f(x, y, tiles);
+                f(x, y, GetTile(offsetX + x, offsetY + y));
             }
         }
     }
 
-    public void ForTileNeighbors(int x, int y, Action<int, int, int> f)
+    public void ForVertexNeighbors(int x, int y, Action<int, int, int> f)
     {
         int i = 0;
         for (int iy = -1; iy < 2; ++iy)

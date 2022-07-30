@@ -85,18 +85,46 @@ public class CliffTileMap : MonoBehaviour, ISerializationCallbackReceiver
         // TODO set all nonce to 0 if _tileMapData changed
     }
 
-    private void GenChunkMesh(CliffTileChunk chunk, ChunkData chunkData)
+    private void GenChunkMesh(CliffChunk chunk, ChunkData chunkData)
     {
-        var gen = new CliffMeshGen(_tileSet, chunk.population);
-        _tileMapData.ForChunkTileWithNeighbors(chunk, (x, y, tiles) =>
+        int population = 0;
+        _tileMapData.ForChunkTiles(chunk, (x, y, tile) =>
         {
-            var tile = tiles[4];
             if (tile.isEmpty)
             {
                 return;
             }
 
-            gen.Add(new Vector3Int(x, y, tile.height - 1), _tileSet.GetTileShapes(x, y, tiles));
+            int height;
+            CliffTileShape shape;
+            _tileSet.GetHeightAndShape(tile, out height, out shape);
+
+            if (!shape.isValid)
+            {
+                return;
+            }
+
+            population += 1;
+        });
+
+        var gen = new CliffMeshGen(_tileSet, population);
+        _tileMapData.ForChunkTiles(chunk, (x, y, tile) =>
+        {
+            if (tile.isEmpty)
+            {
+                return;
+            }
+
+            int height;
+            CliffTileShape shape;
+            _tileSet.GetHeightAndShape(tile, out height, out shape);
+
+            if (!shape.isValid)
+            {
+                return;
+            }
+
+            gen.Add(new Vector3Int(x, y, height), shape);
         });
 
         var mesh = new Mesh { name = $"CliffChunk{chunk.x}x{chunk.y}" };

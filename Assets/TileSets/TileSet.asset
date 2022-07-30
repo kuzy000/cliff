@@ -30,33 +30,19 @@ MonoBehaviour:
     e32: 0
     e33: 0
   _blockSize: {x: 1, y: 0.5, z: 1}
-  _plane1: {fileID: -577795571684211238, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
-  _plane2: {fileID: -5538220705945243834, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _plane3: {fileID: -4860196792993622228, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _plane4: {fileID: -7295208053933978555, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _twoSide1: {fileID: -3666185789236591206, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _twoSide2: {fileID: 2689541949087596338, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _twoSide3: {fileID: -1442809757058308825, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _twoSide4: {fileID: -7294988580407918945, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _sideH1: {fileID: -1469067285363037603, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _sideH2: {fileID: 7302604053380942177, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
-  _sideH3: {fileID: -1112678757515818978, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _sideH4: {fileID: -6083803688683222658, guid: 44d7e8bab985f9034bd281c1e2c4c343,
-    type: 3}
-  _sideV1: {fileID: 6865824361541074841, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
-  _sideV2: {fileID: 7372312783166114381, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
-  _sideV3: {fileID: 6673154903152677824, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
-  _sideV4: {fileID: 1097695458174132494, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
-  _hole1: {fileID: 5178817740997385521, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
-  _hole2: {fileID: -3855259030206101797, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
-  _hole3: {fileID: 9191836343844682202, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
-  _hole4: {fileID: -7323223526110638727, guid: 44d7e8bab985f9034bd281c1e2c4c343, type: 3}
+  _cliff0000: {fileID: 0}
+  _cliff0001: {fileID: 0}
+  _cliff0010: {fileID: 0}
+  _cliff0011: {fileID: 0}
+  _cliff0100: {fileID: 0}
+  _cliff0101: {fileID: 0}
+  _cliff0110: {fileID: 0}
+  _cliff0111: {fileID: 0}
+  _cliff1000: {fileID: 0}
+  _cliff1001: {fileID: 0}
+  _cliff1010: {fileID: 0}
+  _cliff1011: {fileID: 0}
+  _cliff1100: {fileID: 0}
+  _cliff1101: {fileID: 0}
+  _cliff1110: {fileID: 0}
+  _cliff1111: {fileID: 0}
