@@ -87,30 +87,10 @@ public class CliffTileMap : MonoBehaviour, ISerializationCallbackReceiver
 
     private void GenChunkMesh(CliffChunk chunk, ChunkData chunkData)
     {
-        int population = 0;
+        var gen = new CliffMeshGen(_tileSet);
         _tileMapData.ForChunkTiles(chunk, (x, y, tile) =>
         {
-            if (tile.isEmpty)
-            {
-                return;
-            }
-
-            int height;
-            CliffTileShape shape;
-            _tileSet.GetHeightAndShape(tile, out height, out shape);
-
-            if (!shape.isValid)
-            {
-                return;
-            }
-
-            population += 1;
-        });
-
-        var gen = new CliffMeshGen(_tileSet, population);
-        _tileMapData.ForChunkTiles(chunk, (x, y, tile) =>
-        {
-            if (tile.isEmpty)
+            if (tile.isAllEmpty)
             {
                 return;
             }

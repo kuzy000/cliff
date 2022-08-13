@@ -40,8 +40,11 @@ public struct CliffTile : IEnumerable<CliffVertex>
     public CliffVertex tr { get; set; }
     public CliffVertex tl { get; set; }
 
-    public bool isEmpty
+    public bool isAllEmpty
         => bl.isEmpty && br.isEmpty && tr.isEmpty && tl.isEmpty;
+
+    public bool isAnyEmpty
+        => bl.isEmpty || br.isEmpty || tr.isEmpty || tl.isEmpty;
 
     public CliffVertex this[int index] => index switch
     {
