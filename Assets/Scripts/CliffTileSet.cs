@@ -34,50 +34,62 @@ public class CliffTileSet : ScriptableObject
     [Serializable]
     public struct MeshSet
     {
-        [SerializeField] public Mesh mesh0001;
-        [SerializeField] public Mesh mesh0010;
-        [SerializeField] public Mesh mesh0011;
-        [SerializeField] public Mesh mesh0100;
-        [SerializeField] public Mesh mesh0101;
-        [SerializeField] public Mesh mesh0110;
-        [SerializeField] public Mesh mesh0111;
-        [SerializeField] public Mesh mesh1000;
-        [SerializeField] public Mesh mesh1001;
-        [SerializeField] public Mesh mesh1010;
-        [SerializeField] public Mesh mesh1011;
-        [SerializeField] public Mesh mesh1100;
-        [SerializeField] public Mesh mesh1101;
-        [SerializeField] public Mesh mesh1110;
+        [SerializeField] public List<Mesh> _mesh0001;
+        [SerializeField] public List<Mesh> _mesh0010;
+        [SerializeField] public List<Mesh> _mesh0011;
+        [SerializeField] public List<Mesh> _mesh0100;
+        [SerializeField] public List<Mesh> _mesh0101;
+        [SerializeField] public List<Mesh> _mesh0110;
+        [SerializeField] public List<Mesh> _mesh0111;
+        [SerializeField] public List<Mesh> _mesh1000;
+        [SerializeField] public List<Mesh> _mesh1001;
+        [SerializeField] public List<Mesh> _mesh1010;
+        [SerializeField] public List<Mesh> _mesh1011;
+        [SerializeField] public List<Mesh> _mesh1100;
+        [SerializeField] public List<Mesh> _mesh1101;
+        [SerializeField] public List<Mesh> _mesh1110;
+
+        public Mesh GetMesh(int index, int variation)
+        {
+            var list = index switch
+            {
+                0b0001 => _mesh0001,
+                0b0010 => _mesh0010,
+                0b0011 => _mesh0011,
+                0b0100 => _mesh0100,
+                0b0101 => _mesh0101,
+                0b0110 => _mesh0110,
+                0b0111 => _mesh0111,
+                0b1000 => _mesh1000,
+                0b1001 => _mesh1001,
+                0b1010 => _mesh1010,
+                0b1011 => _mesh1011,
+                0b1100 => _mesh1100,
+                0b1101 => _mesh1101,
+                0b1110 => _mesh1110,
+                _ => throw new InvalidOperationException($"shape.value = {index}"),
+            };
+
+            return list[variation % list.Count];
+        }
     }
 
-    public List<(Mesh, bool)> GetMesh(CliffTileShape shape)
+    public List<(Mesh, bool)> GetMesh(CliffTileShape shape, int variation = 0)
     {
         var r = new List<(Mesh, bool)>();
 
-        if (!shape.isBorder)
+        if (!shape.isBorder || shape.value == 0)
         {
             r.Add((_meshGround, true));
         }
 
-        switch (shape.value)
+        variation = UnityEngine.Random.Range(0, 256);
+
+        if (shape.value != 0)
         {
-            case 0b0000: { break; }
-            case 0b0001: { r.Add((_cliff.mesh0001, false)); r.Add((_ground.mesh0001, true)); break; }
-            case 0b0010: { r.Add((_cliff.mesh0010, false)); r.Add((_ground.mesh0010, true)); break; }
-            case 0b0011: { r.Add((_cliff.mesh0011, false)); r.Add((_ground.mesh0011, true)); break; }
-            case 0b0100: { r.Add((_cliff.mesh0100, false)); r.Add((_ground.mesh0100, true)); break; }
-            case 0b0101: { r.Add((_cliff.mesh0101, false)); r.Add((_ground.mesh0101, true)); break; }
-            case 0b0110: { r.Add((_cliff.mesh0110, false)); r.Add((_ground.mesh0110, true)); break; }
-            case 0b0111: { r.Add((_cliff.mesh0111, false)); r.Add((_ground.mesh0111, true)); break; }
-            case 0b1000: { r.Add((_cliff.mesh1000, false)); r.Add((_ground.mesh1000, true)); break; }
-            case 0b1001: { r.Add((_cliff.mesh1001, false)); r.Add((_ground.mesh1001, true)); break; }
-            case 0b1010: { r.Add((_cliff.mesh1010, false)); r.Add((_ground.mesh1010, true)); break; }
-            case 0b1011: { r.Add((_cliff.mesh1011, false)); r.Add((_ground.mesh1011, true)); break; }
-            case 0b1100: { r.Add((_cliff.mesh1100, false)); r.Add((_ground.mesh1100, true)); break; }
-            case 0b1101: { r.Add((_cliff.mesh1101, false)); r.Add((_ground.mesh1101, true)); break; }
-            case 0b1110: { r.Add((_cliff.mesh1110, false)); r.Add((_ground.mesh1110, true)); break; }
-            default: { throw new InvalidOperationException($"shape.value = {shape.value}"); }
-        };
+            r.Add((_cliff.GetMesh(shape.value, variation), false));
+            r.Add((_ground.GetMesh(shape.value, variation), true));
+        }
 
         return r;
     }
