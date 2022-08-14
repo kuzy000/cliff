@@ -1,0 +1,27 @@
+{
+    "name": "com.kuzy000.cliff",
+    "version": "0.1.0",
+    "displayName": "Cliff Terrain",
+    "description": "3D tile terrain inspired by Warcraft3/Dota2",
+    "unity": "2021.3",
+    "unityRelease": "6f1",
+    "license": "MIT",
+    "dependencies": {},
+    "keywords": [
+        "terrain",
+        "tilemap",
+        "3d"
+    ],
+    "author": {
+        "name": "kuzy000",
+        "email": "kuzy000@gmail.com",
+        "url": "https://github.com/kuzy000"
+    },
+    "samples": [
+        {
+            "displayName": "SampleScene",
+            "description": "Contains a simple CliffTileSet and a scene with CliffTileMap that uses it",
+            "path": "~Samples/SampleScene"
+        }
+    ]
+}

@@ -1,0 +1,16 @@
+{
+    "name": "Cliff.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:85372dd1ff844173c8a477237d9fa3db"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
