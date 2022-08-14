@@ -48,8 +48,8 @@ public class CliffTileSetEditor : Editor
         inner.style.marginLeft = 10;
         container.Add(inner);
 
-
         var labelCliff = new Label(label);
+        labelCliff.style.width = 100;
         labelCliff.style.unityTextAlign = TextAnchor.MiddleLeft;
         inner.Add(labelCliff);
 
