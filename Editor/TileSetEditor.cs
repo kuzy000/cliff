@@ -40,6 +40,27 @@ namespace Cliff
                 SetupMesh($"_cliff._mesh{binary}", "Cliff", container, root);
             }
 
+            {
+                var labelTitle = new Label("Fill by Prefix");
+                labelTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
+                root.Add(labelTitle);
+
+                var fillObject = new ObjectField("Object");
+                fillObject.objectType = typeof(Transform);
+                root.Add(fillObject);
+
+                var groundPrefix = new TextField("Ground Prefix");
+                root.Add(groundPrefix);
+                var cliff = new TextField("Cliff Prefix");
+                root.Add(cliff);
+
+                var buttonFill = new Button();
+                buttonFill.text = "Fill";
+                root.Add(buttonFill);
+                buttonFill.RegisterCallback<MouseUpEvent>(e =>
+                    FillByPrefix(fillObject.value as Transform, groundPrefix.value, cliff.value));
+            }
+
             return root;
         }
 
@@ -132,6 +153,46 @@ namespace Cliff
             {
                 container.RemoveAt(container.childCount - 1);
             }
+        }
+
+        void FillByPrefix(Transform root, string prefixGround, string prefixCliff)
+        {
+            Action<SerializedProperty, string> fill = (SerializedProperty prop, string prefix) =>
+            {
+                // TODO use trie for better performance
+                for (int index = 1; index < 15; ++index)
+                {
+                    var binary = Convert.ToString(index, 2).PadLeft(4, '0');
+                    var prefixBinary = prefix + binary;
+
+                    {
+                        var meshProp = prop.FindPropertyRelative($"_mesh{binary}");
+                        meshProp.arraySize = 0;
+                    }
+
+                    foreach (Transform child in root)
+                    {
+                        var meshFilter = child.GetComponent<MeshFilter>();
+                        if (!meshFilter || !meshFilter.sharedMesh)
+                        {
+                            continue;
+                        }
+
+                        if (child.name.StartsWith(prefixBinary))
+                        {
+                            var meshProp = prop.FindPropertyRelative($"_mesh{binary}");
+                            meshProp.arraySize += 1;
+                            meshProp = meshProp.GetArrayElementAtIndex(meshProp.arraySize - 1);
+                            meshProp.objectReferenceValue = meshFilter.sharedMesh;
+                        }
+                    }
+                }
+            };
+
+            fill(serializedObject.FindProperty("_ground"), prefixGround);
+            fill(serializedObject.FindProperty("_cliff"), prefixCliff);
+
+            serializedObject.ApplyModifiedProperties();
         }
     }
 }
