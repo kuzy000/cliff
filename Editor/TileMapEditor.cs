@@ -29,6 +29,9 @@ namespace Cliff
             enumBrushShape.Init(TileMapTool.BrushShape.Circle);
             enumBrushShape.RegisterValueChangedCallback<Enum>(e => _toolBrushShape = (TileMapTool.BrushShape)e.newValue);
 
+            var regenerateAll = root.Q<Button>("regenerate-all");
+            regenerateAll.RegisterCallback<MouseUpEvent>(e => (target as TileMap).SyncWithData(true));
+
             return root;
         }
 

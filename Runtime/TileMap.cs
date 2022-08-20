@@ -31,7 +31,7 @@ namespace Cliff
             }
         }
 
-        public void SyncWithData()
+        public void SyncWithData(bool regenerateAll = false)
         {
             foreach (var chunk in _tileMapData.chunks)
             {
@@ -53,7 +53,7 @@ namespace Cliff
                     chunkData.nonce = 0;
                 }
 
-                if (chunkData.nonce != chunk.nonce)
+                if (regenerateAll || chunkData.nonce != chunk.nonce)
                 {
                     GenChunkMesh(chunk, chunkData);
                     chunkData.nonce = chunk.nonce;
